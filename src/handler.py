@@ -28,7 +28,7 @@ def download_from_s3(s3_uri: str, local_path: str):
 def upload_to_s3(local_path: str, s3_uri: str):
     bucket, key = parse_s3_uri(s3_uri)
     print(f"Uploading to S3: {local_path} to bucket={bucket}, key={key}")
-    s3_client.upload_file(local_path, key, s3_uri)
+    s3_client.upload_file(local_path, bucket, key)
 
 def process_hair_simulation(input_image_path: str, prompt: str, negative_prompt: str, strength: float, output_path: str):
     """

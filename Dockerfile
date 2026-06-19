@@ -1,5 +1,5 @@
-# Use a base image with PyTorch and CUDA support
-FROM runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04
+# Use a lightweight python image for development and testing the pipeline
+FROM python:3.10-slim
 
 WORKDIR /
 
