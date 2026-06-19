@@ -47,9 +47,9 @@ controlnet = ControlNetModel.from_pretrained(
     cache_dir="/cache/huggingface"
 )
 
-print("Step 2: Downloading YamerMIX_v8 Base SDXL Model...")
+print("Step 2: Downloading RealVisXL_V4.0 Base SDXL Model...")
 pipe = StableDiffusionXLControlNetPipeline.from_pretrained(
-    "wangqixun/YamerMIX_v8",
+    "SG161222/RealVisXL_V4.0",
     controlnet=controlnet,
     torch_dtype=torch.float16,
     cache_dir="/cache/huggingface"

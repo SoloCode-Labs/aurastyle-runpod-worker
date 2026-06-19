@@ -115,9 +115,12 @@ def get_pipeline():
             cache_dir=os.path.join(CACHE_ROOT, "huggingface")
         )
         
+        base_model = os.environ.get("BASE_MODEL", "SG161222/RealVisXL_V4.0")
+        print(f"Loading base SDXL model: {base_model}")
+        
         # 2. Load the base SDXL pipeline
         pipe = StableDiffusionXLInstantIDPipeline.from_pretrained(
-            "wangqixun/YamerMIX_v8",
+            base_model,
             controlnet=controlnet,
             torch_dtype=torch.float16,
             local_files_only=False,
