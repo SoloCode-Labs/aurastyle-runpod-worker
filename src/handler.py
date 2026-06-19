@@ -45,7 +45,7 @@ from PIL import Image
 from insightface.app import FaceAnalysis
 
 # Configure HuggingFace cache directory (must match target location in Dockerfile)
-os.environ["HF_HOME"] = "/cache/huggingface"
+os.environ["HF_HOME"] = "/runpod-volume/huggingface"
 
 # Initialize boto3 S3 client
 s3_client = boto3.client("s3")
@@ -57,17 +57,17 @@ app = None
 def ensure_models_downloaded():
     from huggingface_hub import hf_hub_download
     
-    os.makedirs("/cache/huggingface/models", exist_ok=True)
-    os.makedirs("/cache/insightface/models/antelopev2", exist_ok=True)
+    os.makedirs("/runpod-volume/huggingface/models", exist_ok=True)
+    os.makedirs("/runpod-volume/insightface/models/antelopev2", exist_ok=True)
     
     # 1. Download IP-Adapter weights if not present
-    ip_adapter_path = "/cache/huggingface/models/ip-adapter.bin"
+    ip_adapter_path = "/runpod-volume/huggingface/models/ip-adapter.bin"
     if not os.path.exists(ip_adapter_path):
         print("ip-adapter.bin not found. Downloading dynamically...")
         hf_hub_download(
             repo_id="InstantX/InstantID",
             filename="ip-adapter.bin",
-            local_dir="/cache/huggingface/models"
+            local_dir="/runpod-volume/huggingface/models"
         )
         print("ip-adapter.bin downloaded successfully.")
         
@@ -80,13 +80,13 @@ def ensure_models_downloaded():
         "scrfd_10g_bnkps.onnx"
     ]
     for f in antelope_files:
-        path = os.path.join("/cache/insightface/models/antelopev2", f)
+        path = os.path.join("/runpod-volume/insightface/models/antelopev2", f)
         if not os.path.exists(path):
             print(f"InsightFace model {f} not found. Downloading dynamically...")
             hf_hub_download(
                 repo_id="DIAMONIK7777/antelopev2",
                 filename=f,
-                local_dir="/cache/insightface/models/antelopev2"
+                local_dir="/runpod-volume/insightface/models/antelopev2"
             )
             print(f"{f} downloaded successfully.")
 
@@ -103,7 +103,7 @@ def get_pipeline():
             subfolder="ControlNetModel",
             torch_dtype=torch.float16,
             local_files_only=False,
-            cache_dir="/cache/huggingface"
+            cache_dir="/runpod-volume/huggingface"
         )
         
         # 2. Load the base SDXL pipeline
@@ -112,11 +112,11 @@ def get_pipeline():
             controlnet=controlnet,
             torch_dtype=torch.float16,
             local_files_only=False,
-            cache_dir="/cache/huggingface"
+            cache_dir="/runpod-volume/huggingface"
         )
         
         # 3. Load IP-Adapter weights
-        pipe.load_ip_adapter_instantid("/cache/huggingface/models/ip-adapter.bin")
+        pipe.load_ip_adapter_instantid("/runpod-volume/huggingface/models/ip-adapter.bin")
         
         # Move pipeline to CUDA
         pipe = pipe.to("cuda")
@@ -135,7 +135,7 @@ def get_face_analysis():
         ensure_models_downloaded()
         app = FaceAnalysis(
             name='antelopev2',
-            root='/cache/insightface',
+            root='/runpod-volume/insightface',
             providers=['CUDAExecutionProvider', 'CPUExecutionProvider']
         )
         app.prepare(ctx_id=0, det_size=(640, 640))

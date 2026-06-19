@@ -4,7 +4,7 @@ FROM runpod/pytorch:2.2.0-py3.10-cuda12.1.1-devel-ubuntu22.04
 WORKDIR /
 
 # Set environment variables for huggingface and python
-ENV HF_HOME=/cache/huggingface
+ENV HF_HOME=/runpod-volume/huggingface
 ENV PYTHONUNBUFFERED=1
 
 # Copy requirements and install

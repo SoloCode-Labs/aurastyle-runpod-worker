@@ -62,7 +62,6 @@ Para evitar subir una imagen pesada de 15 GB y mantener cold starts rápidos, ut
    * **Container Image**: `<tu-usuario-docker>/aurastyle-runpod-worker:latest` (ahora pesa ~1.5 GB y se sube rápido).
    * **Container Disk**: `15 GB` (disco interno para el contenedor).
    * **Volume Disk**: `0 GB` (no requiere volumen local).
-   * **Select Network Volume**: Selecciona `aurastyle-cache` y define el **Mount Path** como `/cache`.
 3. En **Environment Variables**, añade las variables de AWS del **Paso 2**:
    * Key: `AWS_ACCESS_KEY_ID` | Value: `[Tu Key]`
    * Key: `AWS_SECRET_ACCESS_KEY` | Value: `[Tu Secret]`
@@ -71,10 +70,10 @@ Para evitar subir una imagen pesada de 15 GB y mantener cold starts rápidos, ut
 
 ---
 
-## Paso 4: Crear el Endpoint Serverless en RunPod
+## Paso 4: Crear el Endpoint Serverless y Asociar el Volumen en RunPod
 
 1. Ve a **Serverless** -> **Endpoints** en la barra lateral.
-2. Haz clic en **New Endpoint**.
+2. Haz clic en **New Endpoint** o edita el existente.
 3. Configura las siguientes opciones:
    * **Endpoint Name**: `aurastyle-simulation-endpoint`
    * **Select Template**: Selecciona `aurastyle-hair-simulation` (creada en el Paso 3).
@@ -82,8 +81,11 @@ Para evitar subir una imagen pesada de 15 GB y mantener cold starts rápidos, ut
    * **Max Workers**: `3` (límite máximo de escalabilidad).
    * **Idle Timeout**: `60` segundos (tiempo para apagar el contenedor después de la última petición).
    * **Select GPU Type(s)**: Selecciona `NVIDIA RTX 4090` o `NVIDIA RTX 3090` (24 GB de VRAM son idóneos para InstantID).
-4. Haz clic en **Create**.
-5. Una vez creado, verás una pantalla con la información de tu endpoint. **Copia el ID del Endpoint** (ej. `y4m3g0h5q2w8v1`). Este valor será tu `RunPodEndpointId`.
+4. Despliega la sección **Advanced** del formulario de creación/edición.
+5. Busca el campo **Network Volumes** y selecciona el volumen persistente de 20 GB creado en el **Paso 3.1** (ej. `aurastyle-cache`).
+   * *Nota: RunPod monta automáticamente este volumen en el path `/runpod-volume`, el cual ya está configurado en el código de nuestro worker.*
+6. Haz clic en **Create** (o **Save**).
+7. Una vez creado, verás una pantalla con la información de tu endpoint. **Copia el ID del Endpoint** (ej. `y4m3g0h5q2w8v1`). Este valor será tu `RunPodEndpointId`.
 
 ---
 
