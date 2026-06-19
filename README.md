@@ -43,20 +43,31 @@ Para que el worker de RunPod pueda leer y escribir en tus buckets S3 temporales,
 
 ---
 
-## Paso 3: Crear la Plantilla (Template) en RunPod
+## Paso 3: Configurar el Network Volume y la Plantilla (Template) en RunPod
 
-1. Ve a **Templates** en la consola de RunPod.
-2. Haz clic en **New Template**.
-3. Completa el formulario con la siguiente información:
+### 3.1 Crear el Network Volume (Caché de Modelos)
+Para evitar subir una imagen pesada de 15 GB y mantener cold starts rápidos, utilizaremos un volumen persistente de red:
+1. Ve a **Storage** en la consola de RunPod.
+2. Haz clic en **New Volume**.
+3. Configura:
+   * **Name**: `aurastyle-cache`
+   * **Size**: `20 GB`
+   * **Data Center**: Selecciona la misma región donde desplegarás el Endpoint Serverless.
+4. Guarda el volumen.
+
+### 3.2 Crear la Plantilla (Template)
+1. Ve a **Templates** en la consola de RunPod y haz clic en **New Template**.
+2. Completa el formulario:
    * **Template Name**: `aurastyle-hair-simulation`
-   * **Container Image**: `<tu-usuario-docker>/aurastyle-runpod-worker:latest` (o el URI de tu imagen Docker).
-   * **Container Disk**: `10 GB` (o lo requerido por el modelo).
-   * **Volume Disk**: `0 GB` (los workers de Serverless recomiendan usar disco de contenedor en vez de volumen persistente para reducir cold starts).
-4. En **Environment Variables**, añade las variables de AWS del **Paso 2**:
+   * **Container Image**: `<tu-usuario-docker>/aurastyle-runpod-worker:latest` (ahora pesa ~1.5 GB y se sube rápido).
+   * **Container Disk**: `15 GB` (disco interno para el contenedor).
+   * **Volume Disk**: `0 GB` (no requiere volumen local).
+   * **Select Network Volume**: Selecciona `aurastyle-cache` y define el **Mount Path** como `/cache`.
+3. En **Environment Variables**, añade las variables de AWS del **Paso 2**:
    * Key: `AWS_ACCESS_KEY_ID` | Value: `[Tu Key]`
    * Key: `AWS_SECRET_ACCESS_KEY` | Value: `[Tu Secret]`
    * Key: `AWS_DEFAULT_REGION` | Value: `[Tu Región]`
-5. Haz clic en **Save Template**.
+4. Haz clic en **Save Template**.
 
 ---
 
