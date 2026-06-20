@@ -256,8 +256,8 @@ def handler(job):
                 negative_prompt=negative_prompt,
                 image_embeds=face_emb_tensor,
                 image=kps_image,
-                controlnet_conditioning_scale=strength,
-                ip_adapter_scale=strength,
+                controlnet_conditioning_scale=float(strength),
+                ip_adapter_scale=float(strength),
                 guidance_scale=5.0,
                 num_inference_steps=30,
                 generator=generator
