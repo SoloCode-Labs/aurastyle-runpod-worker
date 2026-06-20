@@ -133,6 +133,11 @@ def get_pipeline():
         # Move pipeline to CUDA
         pipe = pipe.to("cuda")
         
+        # Explicitly move image_proj_model to CUDA — load_ip_adapter_instantid
+        # registers it on CPU and pipe.to("cuda") does not reliably move it.
+        if hasattr(pipe, "image_proj_model") and pipe.image_proj_model is not None:
+            pipe.image_proj_model = pipe.image_proj_model.to(device="cuda", dtype=torch.float16)
+        
         # Performance tuning
         pipe.enable_attention_slicing()
         

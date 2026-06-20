@@ -524,6 +524,10 @@ class StableDiffusionXLInstantIDPipeline(StableDiffusionXLControlNetPipeline):
         else:
             prompt_image_emb = torch.cat([prompt_image_emb], dim=0)
 
+        # Ensure image_proj_model is on the same device/dtype as the input tensor
+        if next(self.image_proj_model.parameters()).device != prompt_image_emb.device:
+            self.image_proj_model = self.image_proj_model.to(device=device, dtype=dtype)
+
         prompt_image_emb = self.image_proj_model(prompt_image_emb)
         return prompt_image_emb
 
