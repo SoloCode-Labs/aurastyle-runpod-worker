@@ -730,6 +730,12 @@ class StableDiffusionXLInstantIDPipeline(StableDiffusionXLControlNetPipeline):
                 mult * [control_guidance_end],
             )
 
+        # Force controlnet_conditioning_scale to Python native float to satisfy
+        # the isinstance(x, float) check in the parent class check_inputs.
+        # numpy.float32/64 and other numeric types would fail that check.
+        if not isinstance(controlnet_conditioning_scale, list):
+            controlnet_conditioning_scale = float(controlnet_conditioning_scale)
+
         # 1. Check inputs. Raise error if not correct
         self.check_inputs(
             prompt,
