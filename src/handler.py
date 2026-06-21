@@ -115,7 +115,7 @@ def get_pipeline():
             cache_dir=os.path.join(CACHE_ROOT, "huggingface")
         )
         
-        base_model = os.environ.get("BASE_MODEL", "SG161222/RealVisXL_V4.0")
+        base_model = os.environ.get("BASE_MODEL", "RunDiffusion/Juggernaut-XL-v9")
         print(f"Loading base SDXL model: {base_model}")
         
         # 2. Load the base SDXL pipeline
@@ -210,9 +210,11 @@ def handler(job):
     job_input = job["input"]
     input_image_uri = job_input.get("input_image")
     output_bucket_uri = job_input.get("output_bucket")
-    prompt = job_input.get("prompt", "handsome young man, showcasing a modern fade haircut, photorealistic, 8k, professional headshot")
-    negative_prompt = job_input.get("negative_prompt", "deformed, bad anatomy, disfigured, poorly drawn face, mutation, extra limbs, ugly, blurry, monochrome, long hair, bald")
-    strength = float(job_input.get("instantid_strength", 0.8))
+    prompt = job_input.get("prompt", "handsome young man, showcasing a modern fade haircut, photorealistic, 8k, professional headshot, same person, same face, same identity, same eyes, same nose, same facial structure, preserve identity")
+    negative_prompt = job_input.get("negative_prompt", "deformed, bad anatomy, disfigured, poorly drawn face, mutation, extra limbs, ugly, blurry, monochrome, long hair, bald, different person, different face, beautified face, altered facial features, plastic surgery, different eyes, different nose")
+    strength = float(job_input.get("instantid_strength", 1.1))
+    guidance_scale = float(job_input.get("guidance_scale", 4.0))
+    num_inference_steps = int(job_input.get("num_inference_steps", 28))
 
     if not input_image_uri or not output_bucket_uri:
         return {"error": "Missing input_image or output_bucket in job payload"}
@@ -246,7 +248,7 @@ def handler(job):
         kps_image = draw_kps(init_image, face_kps)
 
         # 4. Run InstantID Inference
-        print(f"Running InstantID inference. Prompt: '{prompt}', strength: {strength}")
+        print(f"Running InstantID inference. Prompt: '{prompt}', strength: {strength}, CFG: {guidance_scale}, steps: {num_inference_steps}")
         pipeline = get_pipeline()
         
         # Use a fixed generator for reproducibility
@@ -261,10 +263,10 @@ def handler(job):
                 negative_prompt=negative_prompt,
                 image_embeds=face_emb_tensor,
                 image=kps_image,
-                controlnet_conditioning_scale=float(strength),
-                ip_adapter_scale=float(strength),
-                guidance_scale=5.0,
-                num_inference_steps=30,
+                controlnet_conditioning_scale=strength,
+                ip_adapter_scale=strength,
+                guidance_scale=guidance_scale,
+                num_inference_steps=num_inference_steps,
                 generator=generator
             ).images[0]
 
