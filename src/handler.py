@@ -149,15 +149,28 @@ def get_sdxl_pipeline():
     base_model = os.environ.get("BASE_MODEL", "RunDiffusion/Juggernaut-XL-v9")
     print(f"Loading base SDXL model: {base_model}")
     
-    # 2. Load the base SDXL pipeline
-    pipe = StableDiffusionXLInstantIDPipeline.from_pretrained(
-        base_model,
-        controlnet=controlnet,
-        torch_dtype=torch.float16,
-        local_files_only=False,
-        cache_dir=os.path.join(CACHE_ROOT, "huggingface"),
-        token=os.environ.get("HF_TOKEN")
-    )
+    # 2. Load the base SDXL pipeline (try variant="fp16" first for Juggernaut-XL-v9 support)
+    try:
+        print(f"Attempting to load base SDXL model: {base_model} with fp16 variant...")
+        pipe = StableDiffusionXLInstantIDPipeline.from_pretrained(
+            base_model,
+            controlnet=controlnet,
+            torch_dtype=torch.float16,
+            variant="fp16",
+            local_files_only=False,
+            cache_dir=os.path.join(CACHE_ROOT, "huggingface"),
+            token=os.environ.get("HF_TOKEN")
+        )
+    except Exception as e:
+        print(f"Failed loading model with variant='fp16' (Error: {e}). Retrying without variant...")
+        pipe = StableDiffusionXLInstantIDPipeline.from_pretrained(
+            base_model,
+            controlnet=controlnet,
+            torch_dtype=torch.float16,
+            local_files_only=False,
+            cache_dir=os.path.join(CACHE_ROOT, "huggingface"),
+            token=os.environ.get("HF_TOKEN")
+        )
     
     # 3. Load IP-Adapter weights
     pipe.load_ip_adapter_instantid(os.path.join(CACHE_ROOT, "huggingface/models/ip-adapter.bin"))
