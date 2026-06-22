@@ -11,7 +11,6 @@ import numpy as np
 from PIL import Image, ImageChops, ImageFilter
 from diffusers import FluxKontextPipeline
 from transformers import pipeline
-from insightface.app import FaceAnalysis
 
 # Monkeypatch torch.xpu dynamically to prevent AttributeError on older PyTorch versions
 class MockXPU:
@@ -130,6 +129,7 @@ def get_face_analysis():
     if app is None:
         print("Loading FaceAnalysis antelopev2...")
         ensure_models_downloaded()
+        from insightface.app import FaceAnalysis
         app = FaceAnalysis(
             name='antelopev2',
             root=os.path.join(CACHE_ROOT, "insightface"),
