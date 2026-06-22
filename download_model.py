@@ -19,6 +19,17 @@ os.environ["HF_HOME"] = HF_CACHE
 os.environ["HUGGINGFACE_HUB_CACHE"] = HF_CACHE
 os.environ["TRANSFORMERS_CACHE"] = HF_CACHE
 
+import shutil
+def log_disk_space():
+    for name, path in [("Cache Root", CACHE_ROOT), ("Temp Dir", "/tmp"), ("System Root", "/")]:
+        if os.path.exists(path):
+            total, used, free = shutil.disk_usage(path)
+            print(f"[Disk Space] {name} ({path}): Total={total / (1024**3):.2f} GB, Used={used / (1024**3):.2f} GB, Free={free / (1024**3):.2f} GB")
+        else:
+            print(f"[Disk Space] {name} ({path}) does not exist.")
+
+log_disk_space()
+
 hf_token = os.environ.get("HF_TOKEN")
 flux_kontext_repo = os.environ.get("FLUX_KONTEXT_REPO", "black-forest-labs/FLUX.1-Kontext-dev")
 

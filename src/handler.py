@@ -55,6 +55,17 @@ def get_cache_root():
 CACHE_ROOT = get_cache_root()
 os.environ["HF_HOME"] = os.path.join(CACHE_ROOT, "huggingface")
 
+import shutil
+def log_disk_space():
+    for name, path in [("Cache Root", CACHE_ROOT), ("Temp Dir", "/tmp"), ("System Root", "/")]:
+        if os.path.exists(path):
+            total, used, free = shutil.disk_usage(path)
+            print(f"[Disk Space] {name} ({path}): Total={total / (1024**3):.2f} GB, Used={used / (1024**3):.2f} GB, Free={free / (1024**3):.2f} GB")
+        else:
+            print(f"[Disk Space] {name} ({path}) does not exist.")
+
+log_disk_space()
+
 # Initialize S3 Client
 s3_client = boto3.client("s3")
 
