@@ -126,12 +126,29 @@ def get_flux_pipeline():
 def get_segmenter():
     global segmenter
     if segmenter is None:
-        print("Loading face-parsing segmentation pipeline...")
+        print("Loading face-parsing segmentation pipeline manually...")
+        try:
+            from transformers import SegformerImageProcessor as ImageProcessor
+        except ImportError:
+            from transformers import SegformerFeatureExtractor as ImageProcessor
+        from transformers import SegformerForSemanticSegmentation
+
+        model_name = "jonathandinu/face-parsing"
+        cache_dir = os.path.join(CACHE_ROOT, "huggingface")
+
+        print("Loading SegFormer image processor...")
+        processor = ImageProcessor.from_pretrained(model_name, cache_dir=cache_dir)
+        print("Loading SegFormer model...")
+        model = SegformerForSemanticSegmentation.from_pretrained(model_name, cache_dir=cache_dir)
+
+        device = 0 if torch.cuda.is_available() else -1
+
         segmenter = pipeline(
             "image-segmentation",
-            model="jonathandinu/face-parsing",
-            cache_dir=os.path.join(CACHE_ROOT, "huggingface"),
-            device=0 if torch.cuda.is_available() else -1
+            model=model,
+            image_processor=processor,
+            feature_extractor=processor,
+            device=device
         )
         print("Segmentation pipeline loaded successfully!")
     return segmenter
