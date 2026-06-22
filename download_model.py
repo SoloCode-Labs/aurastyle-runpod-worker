@@ -1,4 +1,5 @@
 import os
+os.environ["HF_HUB_DISABLE_XET"] = "1"
 from huggingface_hub import snapshot_download, hf_hub_download
 
 # Configure cache directories dynamically to match container mount paths

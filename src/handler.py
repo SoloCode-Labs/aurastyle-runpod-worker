@@ -1,4 +1,5 @@
 import os
+os.environ["HF_HUB_DISABLE_XET"] = "1"
 import sys
 import types
 import gc
