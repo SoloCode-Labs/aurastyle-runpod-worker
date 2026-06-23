@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - main
+      - feat-fix-blending
 
 env:
   REGISTRY: ghcr.io
@@ -53,7 +54,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+            type=ref,event=branch
             type=sha,format=short
 
       - name: Build and push Docker image

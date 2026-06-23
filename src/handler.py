@@ -200,11 +200,16 @@ def handler(job):
     # Face Preservation settings
     face_preservation = job_input.get("face_preservation", True)
     face_preservation_blur = int(job_input.get("face_preservation_blur", 8))
+    face_preservation_overlay = job_input.get("face_preservation_overlay", False)
+    preserve_skin = job_input.get("preserve_skin", False)
     
     # Custom preserve labels list (default matches face parsing classes)
     preserve_labels = job_input.get("preserve_labels")
     if preserve_labels is None:
-        preserve_labels = ["skin", "l_brow", "r_brow", "l_eye", "r_eye", "nose", "mouth", "u_lip", "l_lip", "l_ear", "r_ear", "eye_g"]
+        if preserve_skin:
+            preserve_labels = ["skin", "l_brow", "r_brow", "l_eye", "r_eye", "nose", "mouth", "u_lip", "l_lip", "l_ear", "r_ear", "eye_g"]
+        else:
+            preserve_labels = ["l_brow", "r_brow", "l_eye", "r_eye", "nose", "mouth", "u_lip", "l_lip", "l_ear", "r_ear", "eye_g"]
     elif isinstance(preserve_labels, str):
         preserve_labels = [label.strip() for label in preserve_labels.split(",")]
     preserve_set = set(preserve_labels)
@@ -297,7 +302,7 @@ def handler(job):
             output_img = output_img.resize(original_size, Image.Resampling.LANCZOS)
 
         # 5. Post-inference Face Preservation Overlay (Double Protection)
-        if face_preservation and face_mask_blurred is not None:
+        if face_preservation and face_preservation_overlay and face_mask_blurred is not None:
             # Composite original face on top of the generated image
             output_img = Image.composite(init_image, output_img, face_mask_blurred)
             print("Post-inference Face Preservation overlay applied.")
