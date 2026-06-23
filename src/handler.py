@@ -9,8 +9,8 @@ import runpod
 import torch
 import cv2
 import numpy as np
-from PIL import Image, ImageChops, ImageFilter
-from diffusers import FluxKontextPipeline
+from PIL import Image, ImageChops, ImageFilter, ImageOps
+from diffusers import FluxKontextInpaintPipeline
 from transformers import pipeline
 
 # Monkeypatch torch.xpu dynamically to prevent AttributeError on older PyTorch versions
@@ -104,7 +104,7 @@ def get_flux_pipeline():
         flux_repo = os.environ.get("FLUX_KONTEXT_REPO", "black-forest-labs/FLUX.1-Kontext-dev")
         hf_token = os.environ.get("HF_TOKEN")
         
-        pipe = FluxKontextPipeline.from_pretrained(
+        pipe = FluxKontextInpaintPipeline.from_pretrained(
             flux_repo,
             torch_dtype=torch.bfloat16,
             cache_dir=os.path.join(CACHE_ROOT, "huggingface"),
@@ -223,7 +223,8 @@ def handler(job):
     try:
         # 1. Download input selfie from S3
         download_from_s3(input_image_uri, local_input)
-        init_image = Image.open(local_input).convert("RGB")
+        init_image = Image.open(local_input)
+        init_image = ImageOps.exif_transpose(init_image).convert("RGB")
         original_size = init_image.size
 
         # 2. Validation Check (Optional Face Detection)
@@ -236,24 +237,7 @@ def handler(job):
                 return {"error": "Validation failed: No face detected in the input image. Please supply a clear portrait selfie."}
             print("Face validation passed successfully.")
 
-        # 3. Load Pipeline & Run Inference
-        print(f"Running FLUX.1 Kontext Dev Inference. Prompt: '{prompt}', guidance_scale: {guidance_scale}, steps: {num_inference_steps}")
-        pipeline = get_flux_pipeline()
-        
-        generator = torch.Generator().manual_seed(seed)
-        
-        with torch.inference_mode():
-            output_img = pipeline(
-                image=init_image,
-                prompt=prompt,
-                guidance_scale=guidance_scale,
-                num_inference_steps=num_inference_steps,
-                generator=generator
-            ).images[0]
-            
-        print("Generation completed successfully.")
-
-        # 4. Face Preservation (Post-processing mask overlays)
+        # 3. Generate Face/Inpaint Masks
         if face_preservation:
             print("Applying SegFormer-based face preservation...")
             seg_pipeline = get_segmenter()
@@ -280,20 +264,49 @@ def handler(job):
             # Feather the edges of the face mask to blend the original face with the new hair smoothly
             face_mask_blurred = face_mask.filter(ImageFilter.GaussianBlur(radius=face_preservation_blur))
             
-            # Ensure generated output image is resized to match the original image coordinates
-            if output_img.size != original_size:
-                print(f"Resizing generated image from {output_img.size} to original size {original_size}...")
-                output_img = output_img.resize(original_size, Image.Resampling.LANCZOS)
-                
+            # Invert the blurred face mask to get the inpaint mask (white=change, black=preserve)
+            inpaint_mask = ImageOps.invert(face_mask_blurred)
+        else:
+            print("Face preservation is disabled. Generating complete image.")
+            face_mask_blurred = None
+            inpaint_mask = Image.new("L", original_size, 255)
+
+        # 4. Load Pipeline & Run Inference
+        strength = float(job_input.get("strength", 1.0))
+        print(f"Running FLUX.1 Kontext Dev Inference. Prompt: '{prompt}', guidance_scale: {guidance_scale}, strength: {strength}, steps: {num_inference_steps}")
+        pipeline = get_flux_pipeline()
+        
+        generator = torch.Generator().manual_seed(seed)
+        
+        with torch.inference_mode():
+            output_img = pipeline(
+                image=init_image,
+                mask_image=inpaint_mask,
+                prompt=prompt,
+                strength=strength,
+                guidance_scale=guidance_scale,
+                num_inference_steps=num_inference_steps,
+                generator=generator
+            ).images[0]
+            
+        print("Generation completed successfully.")
+
+        # Ensure generated output image is resized to match the original image coordinates
+        if output_img.size != original_size:
+            print(f"Resizing generated image from {output_img.size} to original size {original_size}...")
+            output_img = output_img.resize(original_size, Image.Resampling.LANCZOS)
+
+        # 5. Post-inference Face Preservation Overlay (Double Protection)
+        if face_preservation and face_mask_blurred is not None:
             # Composite original face on top of the generated image
             output_img = Image.composite(init_image, output_img, face_mask_blurred)
-            print("Face Preservation applied.")
+            print("Post-inference Face Preservation overlay applied.")
 
-        # 5. Save generated output
+        # 6. Save generated output
         output_img.save(local_output, "JPEG")
         print(f"Saved final output image to {local_output}")
 
-        # 6. Upload final result to target S3 bucket
+        # 7. Upload final result to target S3 bucket
         upload_to_s3(local_output, output_bucket_uri)
 
         # Cleanup local cache files
