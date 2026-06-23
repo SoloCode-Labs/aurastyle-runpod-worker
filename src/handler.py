@@ -200,8 +200,8 @@ def handler(job):
     # Face Preservation settings
     face_preservation = job_input.get("face_preservation", True)
     face_preservation_blur = int(job_input.get("face_preservation_blur", 8))
-    face_preservation_overlay = job_input.get("face_preservation_overlay", False)
-    preserve_skin = job_input.get("preserve_skin", False)
+    face_preservation_overlay = job_input.get("face_preservation_overlay", True)
+    preserve_skin = job_input.get("preserve_skin", True)
     
     # Custom preserve labels list (default matches face parsing classes)
     preserve_labels = job_input.get("preserve_labels")
@@ -250,6 +250,28 @@ def handler(job):
             # SegFormer expects PIL image and returns list of dicts with label and mask PIL image
             segmentation_results = seg_pipeline(init_image)
             
+            # First, find the highest pixel of the eyebrows (l_brow, r_brow) to detect the forehead boundary
+            eyebrow_y_min = None
+            for res in segmentation_results:
+                label = res.get("label")
+                if label in ("l_brow", "r_brow"):
+                    mask_pil = res.get("mask")
+                    if mask_pil is not None:
+                        import numpy as np
+                        mask_arr = np.array(mask_pil)
+                        y_indices = np.where(mask_arr > 0)[0]
+                        if len(y_indices) > 0:
+                            local_min_y = int(np.min(y_indices))
+                            if mask_pil.size != original_size:
+                                scale_y = original_size[1] / mask_pil.size[1]
+                                local_min_y = int(local_min_y * scale_y)
+                            if eyebrow_y_min is None or local_min_y < eyebrow_y_min:
+                                eyebrow_y_min = local_min_y
+
+            # Fallback if no eyebrows are detected (e.g. assume forehead starts at 35% height)
+            if eyebrow_y_min is None:
+                eyebrow_y_min = int(original_size[1] * 0.35)
+                
             face_mask = Image.new("L", original_size, 0)
             found_labels = []
             
@@ -262,6 +284,14 @@ def handler(job):
                     # Ensure mask size matches original image
                     if mask_pil.size != original_size:
                         mask_pil = mask_pil.resize(original_size, Image.Resampling.NEAREST)
+                    
+                    # If label is skin, clear the forehead region (above eyebrows) to allow bangs/hair blending
+                    if label == "skin":
+                        import numpy as np
+                        skin_arr = np.array(mask_pil)
+                        skin_arr[:eyebrow_y_min, :] = 0
+                        mask_pil = Image.fromarray(skin_arr)
+                        
                     face_mask = ImageChops.lighter(face_mask, mask_pil)
             
             print(f"Preserving facial components: {found_labels}")
